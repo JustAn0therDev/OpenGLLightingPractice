@@ -13,7 +13,7 @@
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void processInput(GLFWwindow* window);
+void processInput(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 // settings
 const unsigned int SCR_WIDTH = 800;
@@ -31,6 +31,12 @@ float lastFrame = 0.0f;
 
 // lighting
 glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+constexpr float ambientLighting = 0.1f;
+float currentAmbient = ambientLighting;
+
+// Shaders
+Shader* lightingShader;
+Shader* lightCubeShader;
 
 int main()
 {
@@ -60,6 +66,7 @@ int main()
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetScrollCallback(window, scroll_callback);
+    glfwSetKeyCallback(window, processInput);
     
 	// tell GLFW to capture our mouse
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -78,11 +85,11 @@ int main()
     
 	// build and compile our shader program
 	// ------------------------------------
-	Shader lightingShader("Assets\\Shaders\\1.colors.vs", "Assets\\Shaders\\1.colors.fs");
-	Shader lightCubeShader("Assets\\Shaders\\1.light_cube.vs", "Assets\\Shaders\\1.light_cube.fs");
+	lightingShader = new Shader("Assets\\Shaders\\1.colors.vs", "Assets\\Shaders\\1.colors.fs");
+	lightCubeShader = new Shader("Assets\\Shaders\\1.light_cube.vs", "Assets\\Shaders\\1.light_cube.fs");
     
-	// set up vertex data (and buffer(s)) and configure vertex attributes
-	// ------------------------------------------------------------------
+	lightingShader->setFloat("ambientLighting", currentAmbient);
+    
 	float vertices[] = {
 		-0.5f, -0.5f, -0.5f,
         0.5f, -0.5f, -0.5f,
@@ -126,6 +133,7 @@ int main()
 		-0.5f,  0.5f,  0.5f,
 		-0.5f,  0.5f, -0.5f,
 	};
+    
 	// first, configure the cube's VAO (and VBO)
 	unsigned int VBO, cubeVAO;
 	glGenVertexArrays(1, &cubeVAO);
@@ -140,17 +148,12 @@ int main()
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
     
-	// second, configure the light's VAO (VBO stays the same; the vertices are the same for the light object which is also a 3D cube)
 	unsigned int lightCubeVAO;
 	glGenVertexArrays(1, &lightCubeVAO);
 	glBindVertexArray(lightCubeVAO);
     
-	// we only need to bind to the VBO (to link it with glVertexAttribPointer), no need to fill it; the VBO's data already contains all we need (it's already bound, but we do it again for educational purposes)
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
-    
     
 	// render loop
 	// -----------
@@ -162,85 +165,84 @@ int main()
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
         
-		// input
-		// -----
-		processInput(window);
-        
 		// render
 		// ------
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
 		// be sure to activate shader when setting uniforms/drawing objects
-		lightingShader.use();
-		lightingShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
-		lightingShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
+		lightingShader->use();
+		lightingShader->setVec3("objectColor", 1.0f, 0.5f, 0.31f);
+		lightingShader->setVec3("lightColor", 1.0f, 1.0f, 1.0f);
+        
+        // Configure the ambient lighting uniform so that the input
+        // may always change in when the time comes.
+        lightingShader->setFloat("ambientLighting", currentAmbient);
         
 		// view/projection transformations
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 		glm::mat4 view = camera.GetViewMatrix();
-		lightingShader.setMat4("projection", projection);
-		lightingShader.setMat4("view", view);
+		lightingShader->setMat4("projection", projection);
+		lightingShader->setMat4("view", view);
         
 		// world transformation
 		glm::mat4 model = glm::mat4(1.0f);
-		lightingShader.setMat4("model", model);
+		lightingShader->setMat4("model", model);
         
 		// render the cube
 		glBindVertexArray(cubeVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
         
-        
 		// also draw the lamp object
-		lightCubeShader.use();
-		lightCubeShader.setMat4("projection", projection);
-		lightCubeShader.setMat4("view", view);
+		lightCubeShader->use();
+		lightCubeShader->setMat4("projection", projection);
+		lightCubeShader->setMat4("view", view);
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, lightPos);
 		model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
-		lightCubeShader.setMat4("model", model);
+		lightCubeShader->setMat4("model", model);
         
 		glBindVertexArray(lightCubeVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
         
-        
-		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-		// -------------------------------------------------------------------------------
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
     
-	// optional: de-allocate all resources once they've outlived their purpose:
-	// ------------------------------------------------------------------------
 	glDeleteVertexArrays(1, &cubeVAO);
 	glDeleteVertexArrays(1, &lightCubeVAO);
 	glDeleteBuffers(1, &VBO);
     
-	// glfw: terminate, clearing all previously allocated GLFW resources.
-	// ------------------------------------------------------------------
+    delete lightingShader;
+    delete lightCubeShader;
+    
 	glfwTerminate();
 	return 0;
 }
 
-// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-// ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow* window)
+void processInput(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, true);
+    if (key == GLFW_KEY_ESCAPE)
+        glfwSetWindowShouldClose(window, true);
     
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera.ProcessKeyboard(FORWARD, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera.ProcessKeyboard(BACKWARD, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		camera.ProcessKeyboard(LEFT, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		camera.ProcessKeyboard(RIGHT, deltaTime);
+    if (key == GLFW_KEY_W)
+        camera.ProcessKeyboard(FORWARD, deltaTime);
+    if (key == GLFW_KEY_S)
+        camera.ProcessKeyboard(BACKWARD, deltaTime);
+    if (key == GLFW_KEY_A)
+        camera.ProcessKeyboard(LEFT, deltaTime);
+    if (key == GLFW_KEY_D)
+        camera.ProcessKeyboard(RIGHT, deltaTime);
+    
+    if (action == GLFW_RELEASE)
+    {
+        if (key == GLFW_KEY_RIGHT)
+            currentAmbient -= ambientLighting;
+        else if (key == GLFW_KEY_LEFT)
+            currentAmbient += ambientLighting;
+    }
 }
 
-// glfw: whenever the window size changed (by OS or user resize) this callback function executes
-// ---------------------------------------------------------------------------------------------
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
 	// make sure the viewport matches the new window dimensions; note that width and 
@@ -248,9 +250,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	glViewport(0, 0, width, height);
 }
 
-
-// glfw: whenever the mouse moves, this callback is called
-// -------------------------------------------------------
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 {
 	float xpos = static_cast<float>(xposIn);
@@ -272,8 +271,6 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 	camera.ProcessMouseMovement(xoffset, yoffset);
 }
 
-// glfw: whenever the mouse scroll wheel scrolls, this callback is called
-// ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
 	camera.ProcessMouseScroll(static_cast<float>(yoffset));
