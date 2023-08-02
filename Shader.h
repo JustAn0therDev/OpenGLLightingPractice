@@ -11,7 +11,7 @@
 
 class Shader
 {
-public:
+    public:
 	unsigned int ID;
 	// constructor generates the shader on the fly
 	// ------------------------------------------------------------------------
@@ -68,7 +68,7 @@ public:
 		// delete the shaders as they're linked into our program now and no longer necessary
 		glDeleteShader(vertex);
 		glDeleteShader(fragment);
-
+        
 	}
 	// activate the shader
 	// ------------------------------------------------------------------------
@@ -134,8 +134,8 @@ public:
 	{
 		glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
 	}
-
-private:
+    
+    private:
 	// utility function for checking shader compilation/linking errors.
 	// ------------------------------------------------------------------------
 	void checkCompileErrors(GLuint shader, std::string type)
