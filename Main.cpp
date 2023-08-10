@@ -53,7 +53,7 @@ int main()
     
 	// glfw window creation
 	// --------------------
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(1920, 1080, "LearnOpenGL", NULL, NULL);
 	
     if (window == NULL)
 	{
@@ -153,8 +153,8 @@ int main()
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
     
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(sizeof(float) * 3));
-    glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(sizeof(float) * 3));
+	glEnableVertexAttribArray(1);
     
 	unsigned int lightCubeVAO;
 	glGenVertexArrays(1, &lightCubeVAO);
@@ -178,11 +178,15 @@ int main()
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
+        // lightPos update
+		glm::vec3 lightPosOrbit = glm::vec3(glm::sin(currentFrame * 2.0f) * lightPos.x, lightPos.y, glm::cos(currentFrame * 2.0f) * lightPos.z);
+        
 		// be sure to activate shader when setting uniforms/drawing objects
 		lightingShader->use();
 		lightingShader->setVec3("objectColor", 1.0f, 0.5f, 0.31f);
 		lightingShader->setVec3("lightColor", 1.0f, 1.0f, 1.0f);
-        lightingShader->setVec3("lightPos", lightPos);
+        lightingShader->setVec3("lightPos", lightPosOrbit);
+        lightingShader->setVec3("viewPos", camera.Position);
         
         // Configure the ambient lighting uniform so that the input
         // may always change in when the time comes.
@@ -211,11 +215,11 @@ int main()
         model = glm::mat4(1.0f);
         
         // lightPos is just the position of the white cube that will be used as a lamp.
-		model = glm::translate(model, lightPos);
+		model = glm::translate(model, lightPosOrbit);
 		model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
         lightCubeShader->setMat4("model", model);
-        
-        // bind the other cube and draw again
+
+	// bind the other cube and draw again
 		glBindVertexArray(lightCubeVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
         
@@ -247,18 +251,6 @@ void processInput(GLFWwindow* window, int key, int scancode, int action, int mod
         camera.ProcessKeyboard(LEFT, deltaTime);
     if (key == GLFW_KEY_D)
         camera.ProcessKeyboard(RIGHT, deltaTime);
-    
-    if (action == GLFW_RELEASE)
-    {
-        if (key == GLFW_KEY_RIGHT)
-        {
-            lightPos.x += 1.0f;
-        }
-        else if (key == GLFW_KEY_LEFT)
-        {
-            lightPos.x -= 1.0f;
-        }
-    }
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
@@ -274,10 +266,10 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 	float ypos = static_cast<float>(yposIn);
     
 	if (firstMouse)
-	{
-		lastX = xpos;
-		lastY = ypos;
-		firstMouse = false;
+        {
+	  lastX = xpos;
+	  lastY = ypos;
+	  firstMouse = false;
 	}
     
 	float xoffset = xpos - lastX;
