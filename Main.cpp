@@ -181,10 +181,10 @@ int main()
   int width, height, nrChannels;
   unsigned char* data = stbi_load("Assets\\Images\\container2.png", &width, &height, &nrChannels, 0);
 
-  unsigned int texture;
-  glGenTextures(1, &texture);
+  unsigned int diffuseMap;
+  glGenTextures(1, &diffuseMap);
 
-  glBindTexture(GL_TEXTURE_2D, texture);
+  glBindTexture(GL_TEXTURE_2D, diffuseMap);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
   glGenerateMipmap(GL_TEXTURE_2D);
   
@@ -193,9 +193,27 @@ int main()
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-  // free the loaded image.
+  // free the loaded container image.
   stbi_image_free(data);
 
+  // load the specular map image.
+  data = stbi_load("Assets\\Images\\container2_specular.png", &width, &height, &nrChannels, 0);
+
+  unsigned int specularMap;
+  glGenTextures(1, &specularMap);
+
+  glBindTexture(GL_TEXTURE_2D, specularMap);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+  glGenerateMipmap(GL_TEXTURE_2D);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  // free the loaded specular image.
+  stbi_image_free(data);
+  
   unsigned int lightCubeVAO;
   glGenVertexArrays(1, &lightCubeVAO);
   glBindVertexArray(lightCubeVAO);
@@ -231,11 +249,14 @@ int main()
       lightingShader->setVec3("viewPos", camera.Position);
 
       glActiveTexture(GL_TEXTURE0);
-      glBindTexture(GL_TEXTURE_2D, texture);
+      glBindTexture(GL_TEXTURE_2D, diffuseMap);
+
+      glActiveTexture(GL_TEXTURE1);
+      glBindTexture(GL_TEXTURE_2D, specularMap);
 
       // Set the material
       lightingShader->setInt("material.diffuse", 0);
-      lightingShader->setVec3("material.specular", material.specular);
+      lightingShader->setInt("material.specular", 1);
       lightingShader->setFloat("material.shininess", material.shininess);
 
       // Set lighting
