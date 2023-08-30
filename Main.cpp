@@ -19,6 +19,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window, int key, int scancode, int action, int mods);
+unsigned int loadTexture(const char* resourcePath);
 
 // settings
 const unsigned int SCR_WIDTH = 800;
@@ -40,6 +41,9 @@ glm::vec3 lightPos(1.2f, 1.0f, 2.0f); // the initial light cube position
 // Shaders
 Shader* lightingShader;
 Shader* lightCubeShader;
+
+// Testing
+float texCoordY = 0.0f;
 
 int main()
 {
@@ -177,41 +181,14 @@ int main()
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(sizeof(float) * 6));
 	glEnableVertexAttribArray(2);
 
-	int width, height, nrChannels;
-	unsigned char* data = stbi_load("Assets\\Images\\container2.png", &width, &height, &nrChannels, 0);
-
-	unsigned int diffuseMap;
-	glGenTextures(1, &diffuseMap);
-
-	glBindTexture(GL_TEXTURE_2D, diffuseMap);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-	glGenerateMipmap(GL_TEXTURE_2D);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	// free the loaded container image.
-	stbi_image_free(data);
+	// Load diffuse map image.
+	unsigned int diffuseMap = loadTexture("Assets\\Images\\container2.png");
 
 	// load the specular map image.
-	data = stbi_load("Assets\\Images\\container2_specular.png", &width, &height, &nrChannels, 0);
+	unsigned int specularMap = loadTexture("Assets\\Images\\container2_specular.png");
 
-	unsigned int specularMap;
-	glGenTextures(1, &specularMap);
-
-	glBindTexture(GL_TEXTURE_2D, specularMap);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-	glGenerateMipmap(GL_TEXTURE_2D);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	// free the loaded specular image.
-	stbi_image_free(data);
+	// Load the emission map image.
+	unsigned int emissionMap = loadTexture("Assets\\Images\\matrix.jpg");
 
 	unsigned int lightCubeVAO;
 	glGenVertexArrays(1, &lightCubeVAO);
@@ -251,14 +228,21 @@ int main()
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, diffuseMap);
 
-		// And the second one, where the shininess is present
+		// The second one, where the shininess is present
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, specularMap);
+		
+		// The third one that emits light
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, emissionMap);
 
 		// Set the material
 		lightingShader->setInt("material.diffuse", 0);
 		lightingShader->setInt("material.specular", 1);
+		lightingShader->setInt("material.emission", 2);
 		lightingShader->setFloat("material.shininess", material.shininess);
+
+		lightingShader->setFloat("time", currentFrame * texCoordY);
 
 		// Set lighting
 		lightingShader->setVec3("light.position", lightPosOrbit);
@@ -326,6 +310,12 @@ void processInput(GLFWwindow* window, int key, int scancode, int action, int mod
 		camera.ProcessKeyboard(LEFT, deltaTime);
 	if (key == GLFW_KEY_D)
 		camera.ProcessKeyboard(RIGHT, deltaTime);
+	
+	if (key == GLFW_KEY_RIGHT)
+		texCoordY = 1.0f;
+	
+	if (key == GLFW_KEY_LEFT)
+		texCoordY = -1.0f;
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
@@ -357,4 +347,45 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
 	camera.ProcessMouseScroll(static_cast<float>(yoffset));
+}
+
+unsigned int loadTexture(const char* resourcePath) {
+	unsigned int textureID = -1;
+	int width, height, nrChannels;
+
+	unsigned char* data = stbi_load(resourcePath, &width, &height, &nrChannels, 0);
+
+	if (data) {
+		GLuint format = 0;
+
+		if (nrChannels == 1) {
+			format = GL_RED;
+		}
+		else if (nrChannels == 3) {
+			format = GL_RGB;
+		}
+		else if (nrChannels == 4) {
+			format = GL_RGBA;
+		}
+
+		glGenTextures(1, &textureID);
+
+		glBindTexture(GL_TEXTURE_2D, textureID);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		// free the loaded container image.
+		stbi_image_free(data);
+	}
+	else
+	{
+		std::cout << "Unable to load image data. Path: " << resourcePath << std::endl;
+	}
+
+	return textureID;
 }
