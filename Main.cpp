@@ -159,6 +159,19 @@ int main()
 		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
 	};
 
+	glm::vec3 cubePositions[] = {
+		glm::vec3(0.0f,  0.0f,  0.0f),
+		glm::vec3(2.0f,  5.0f, -15.0f),
+		glm::vec3(-1.5f, -2.2f, -2.5f),
+		glm::vec3(-3.8f, -2.0f, -12.3f),
+		glm::vec3(2.4f, -0.4f, -3.5f),
+		glm::vec3(-1.7f,  3.0f, -7.5f),
+		glm::vec3(1.3f, -2.0f, -2.5f),
+		glm::vec3(1.5f,  2.0f, -2.5f),
+		glm::vec3(1.5f,  0.2f, -1.5f),
+		glm::vec3(-1.3f,  1.0f, -1.5f)
+	};
+
 	// first, configure the cube's VAO (and VBO)
 	unsigned int VBO, cubeVAO;
 	glGenVertexArrays(1, &cubeVAO);
@@ -215,13 +228,13 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// lightPos update
-		glm::vec3 lightPosOrbit = glm::vec3(glm::sin(currentFrame * 2.0f) * lightPos.x, lightPos.y, glm::cos(currentFrame * 2.0f) * lightPos.z);
+		// glm::vec3 lightPosOrbit = glm::vec3(glm::sin(currentFrame * 2.0f) * lightPos.x, lightPos.y, glm::cos(currentFrame * 2.0f) * lightPos.z);
 
 		// be sure to activate shader when setting uniforms/drawing objects
 		lightingShader->use();
 		lightingShader->setVec3("objectColor", 1.0f, 0.5f, 0.31f);
 		lightingShader->setVec3("lightColor", 1.0f, 1.0f, 1.0f);
-		lightingShader->setVec3("lightPos", lightPosOrbit);
+		lightingShader->setVec3("lightPos", lightPos);
 		lightingShader->setVec3("viewPos", camera.Position);
 
 		// Activate the first texture
@@ -233,8 +246,8 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, specularMap);
 		
 		// The third one that emits light
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, emissionMap);
+		//glActiveTexture(GL_TEXTURE2);
+		//glBindTexture(GL_TEXTURE_2D, emissionMap);
 
 		// Set the material
 		lightingShader->setInt("material.diffuse", 0);
@@ -245,10 +258,16 @@ int main()
 		lightingShader->setFloat("time", currentFrame * texCoordY);
 
 		// Set lighting
-		lightingShader->setVec3("light.position", lightPosOrbit);
+		lightingShader->setVec3("light.direction", -0.2f, -1.0f, -0.3f);
+		lightingShader->setVec3("light.position", lightPos);
 		lightingShader->setVec3("light.ambient", light.ambient);
 		lightingShader->setVec3("light.diffuse", light.diffuse);
 		lightingShader->setVec3("light.specular", light.specular);
+		
+		// Set the values for light attenuation
+		lightingShader->setFloat("light.constant", 1.0f);
+		lightingShader->setFloat("light.quadratic", 0.09f);
+		lightingShader->setFloat("light.linear", 0.032f);
 
 		// view/projection transformations
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
@@ -261,10 +280,24 @@ int main()
 		lightingShader->setMat4("model", model);
 
 		// render the cube - draw
-		glBindVertexArray(cubeVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
+		//glBindVertexArray(cubeVAO);
+		//glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		for (unsigned int i = 0; i < 10; i++)
+		{
+			glm::mat4 model = glm::mat4(1.0f);
+			model = glm::translate(model, cubePositions[i]);
+			float angle = 20.0f * i;
+			model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+			lightingShader->setMat4("model", model);
+
+			glBindVertexArray(cubeVAO);
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
 
 		// also draw the lamp object
+		// NOTE(Ruan): Uncomment to draw the light cube!
+
 		lightCubeShader->use();
 		lightCubeShader->setMat4("projection", projection);
 		lightCubeShader->setMat4("view", view);
@@ -273,7 +306,7 @@ int main()
 		model = glm::mat4(1.0f);
 
 		// lightPosOrbit is the current position of the white cube.
-		model = glm::translate(model, lightPosOrbit);
+		model = glm::translate(model, lightPos);
 		model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
 
 		lightCubeShader->setMat4("model", model);
@@ -311,11 +344,17 @@ void processInput(GLFWwindow* window, int key, int scancode, int action, int mod
 	if (key == GLFW_KEY_D)
 		camera.ProcessKeyboard(RIGHT, deltaTime);
 	
-	if (key == GLFW_KEY_RIGHT)
-		texCoordY = 1.0f;
+	if (key == GLFW_KEY_UP)
+		lightPos.z -= 1.0f;
 	
+	if (key == GLFW_KEY_DOWN)
+		lightPos.z += 1.0f;
+
 	if (key == GLFW_KEY_LEFT)
-		texCoordY = -1.0f;
+		lightPos.x -= 1.0f;
+
+	if (key == GLFW_KEY_RIGHT)
+		lightPos.x += 1.0f;
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
