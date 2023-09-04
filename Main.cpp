@@ -258,8 +258,17 @@ int main()
 		lightingShader->setFloat("time", currentFrame * texCoordY);
 
 		// Set lighting
-		lightingShader->setVec3("light.direction", -0.2f, -1.0f, -0.3f);
-		lightingShader->setVec3("light.position", lightPos);
+		// Uncomment below to see point light!
+		//lightingShader->setVec3("light.direction", -0.2f, -1.0f, -0.3f);
+		//lightingShader->setVec3("light.position", lightPos);
+
+		// Uncomment below to see spotlight!
+		lightingShader->setVec3("light.position", camera.Position);
+		lightingShader->setVec3("light.direction", camera.Front);
+		lightingShader->setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
+		lightingShader->setFloat("light.outerCutOff", glm::cos(glm::radians(17.5f)));
+
+
 		lightingShader->setVec3("light.ambient", light.ambient);
 		lightingShader->setVec3("light.diffuse", light.diffuse);
 		lightingShader->setVec3("light.specular", light.specular);

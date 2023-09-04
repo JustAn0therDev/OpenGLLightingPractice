@@ -12,6 +12,8 @@ uniform Material material;
 struct Light {
     vec3 direction;
     vec3 position;
+    float cutOff;
+    float outerCutOff;
 
     vec3 ambient;
     vec3 diffuse;
@@ -37,7 +39,7 @@ in vec2 TexCoords;
 
 out vec4 FragColor;
 
-void main()
+vec4 calculateLighting()
 {
     // ambient
     vec3 ambient = light.ambient * texture(material.diffuse, TexCoords).rgb;
@@ -59,11 +61,35 @@ void main()
     float distance = length(light.position - FragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
 
-    ambient *= attenuation;
+    // Comment to make spotlight work
+    //ambient *= attenuation;
     diffuse *= attenuation;
     specular *= attenuation;
 
+    float theta     = dot(lightDir, normalize(-light.direction));
+    float epsilon   = light.cutOff - light.outerCutOff;
+    float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);    
+
+    diffuse *= intensity;
+    specular *= intensity;
+
     vec3 result = ambient + diffuse + specular + emission;
     
-    FragColor = vec4(result, 1.0);
+    return vec4(result, 1.0);
+}
+
+void main()
+{
+    // Uncomment to see spotlight
+    vec3 lightDir = normalize(light.position - FragPos);
+
+    float theta = dot(lightDir, normalize(-light.direction));
+    
+    if(theta > light.cutOff)
+    {       
+      FragColor = calculateLighting();
+    }
+    else  // else, use ambient light so scene isn't completely dark outside the spotlight.
+      FragColor = vec4(light.ambient * vec3(texture(material.diffuse, TexCoords)), 1.0);
+
 }
