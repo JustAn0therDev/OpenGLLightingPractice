@@ -43,7 +43,7 @@ vec4 calculateLighting()
 {
     // ambient
     vec3 ambient = light.ambient * texture(material.diffuse, TexCoords).rgb;
-  	
+
     // diffuse 
     vec3 norm = normalize(Normal);
     vec3 lightDir = normalize(-light.direction);
@@ -55,8 +55,8 @@ vec4 calculateLighting()
     vec3 reflectDir = reflect(-lightDir, norm);  
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
     vec3 specular = light.specular * spec * texture(material.specular, TexCoords).rgb;  
-	
-	vec3 emission = texture(material.emission, TexCoords - vec2(0.0, time * 3.0)).rgb;
+
+    vec3 emission = texture(material.emission, TexCoords - vec2(0.0, time * 3.0)).rgb;
     
     float distance = length(light.position - FragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));

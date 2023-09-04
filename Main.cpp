@@ -42,8 +42,8 @@ glm::vec3 lightPos(1.2f, 1.0f, 2.0f); // the initial light cube position
 Shader* lightingShader;
 Shader* lightCubeShader;
 
-// Testing
-float texCoordY = 0.0f;
+// Wireframe toggle
+bool wireframeToggle = false;
 
 int main()
 {
@@ -255,8 +255,6 @@ int main()
 		lightingShader->setInt("material.emission", 2);
 		lightingShader->setFloat("material.shininess", material.shininess);
 
-		lightingShader->setFloat("time", currentFrame * texCoordY);
-
 		// Set lighting
 		// Uncomment below to see point light!
 		//lightingShader->setVec3("light.direction", -0.2f, -1.0f, -0.3f);
@@ -267,7 +265,6 @@ int main()
 		lightingShader->setVec3("light.direction", camera.Front);
 		lightingShader->setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
 		lightingShader->setFloat("light.outerCutOff", glm::cos(glm::radians(17.5f)));
-
 
 		lightingShader->setVec3("light.ambient", light.ambient);
 		lightingShader->setVec3("light.diffuse", light.diffuse);
@@ -352,18 +349,24 @@ void processInput(GLFWwindow* window, int key, int scancode, int action, int mod
 		camera.ProcessKeyboard(LEFT, deltaTime);
 	if (key == GLFW_KEY_D)
 		camera.ProcessKeyboard(RIGHT, deltaTime);
-	
 	if (key == GLFW_KEY_UP)
 		lightPos.z -= 1.0f;
-	
 	if (key == GLFW_KEY_DOWN)
 		lightPos.z += 1.0f;
-
 	if (key == GLFW_KEY_LEFT)
 		lightPos.x -= 1.0f;
-
 	if (key == GLFW_KEY_RIGHT)
 		lightPos.x += 1.0f;
+
+	if (key == GLFW_KEY_F && action == GLFW_RELEASE)
+		if (!wireframeToggle) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			wireframeToggle = true;
+		}
+		else {
+			wireframeToggle = false;
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		}
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
