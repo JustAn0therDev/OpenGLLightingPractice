@@ -14,6 +14,7 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include "LightMode.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -44,6 +45,9 @@ Shader* lightCubeShader;
 
 // Wireframe toggle
 bool wireframeToggle = false;
+
+// Light toggle
+LightMode lightModeToggle = LightMode::Point;
 
 int main()
 {
@@ -100,7 +104,7 @@ int main()
 	lightCubeShader = new Shader("Assets\\Shaders\\1.light_cube.vs", "Assets\\Shaders\\1.light_cube.fs");
 
 	// Material settings
-	Material material;
+	Material material = {};
 
 	// Cyan plastic
 	material.diffuse = { 0.0f, 0.50980392f, 0.50980392f };
@@ -108,7 +112,7 @@ int main()
 	material.shininess = 32.0f;
 
 	// Light settings
-	Light light;
+	Light light = {};
 
 	light.ambient = { 0.2f, 0.2f, 0.2f };
 	light.diffuse = { 0.5f, 0.5f, 0.5f };
@@ -255,16 +259,21 @@ int main()
 		lightingShader->setInt("material.emission", 2);
 		lightingShader->setFloat("material.shininess", material.shininess);
 
-		// Set lighting
-		// Uncomment below to see point light!
-		//lightingShader->setVec3("light.direction", -0.2f, -1.0f, -0.3f);
-		//lightingShader->setVec3("light.position", lightPos);
+		// Set lighting modes
+		lightingShader->setInt("lightmodeToggle", static_cast<int>(lightModeToggle));
 
-		// Uncomment below to see spotlight!
-		lightingShader->setVec3("light.position", camera.Position);
-		lightingShader->setVec3("light.direction", camera.Front);
-		lightingShader->setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
-		lightingShader->setFloat("light.outerCutOff", glm::cos(glm::radians(17.5f)));
+		if (lightModeToggle == LightMode::Point) {
+			// Point light!
+			lightingShader->setVec3("light.direction", -0.2f, -1.0f, -0.3f);
+			lightingShader->setVec3("light.position", lightPos);
+		}
+		else {
+			// spotlight!
+			lightingShader->setVec3("light.position", camera.Position);
+			lightingShader->setVec3("light.direction", camera.Front);
+			lightingShader->setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
+			lightingShader->setFloat("light.outerCutOff", glm::cos(glm::radians(17.5f)));
+		}
 
 		lightingShader->setVec3("light.ambient", light.ambient);
 		lightingShader->setVec3("light.diffuse", light.diffuse);
@@ -358,7 +367,7 @@ void processInput(GLFWwindow* window, int key, int scancode, int action, int mod
 	if (key == GLFW_KEY_RIGHT)
 		lightPos.x += 1.0f;
 
-	if (key == GLFW_KEY_F && action == GLFW_RELEASE)
+	if (key == GLFW_KEY_F && action == GLFW_RELEASE) {
 		if (!wireframeToggle) {
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 			wireframeToggle = true;
@@ -367,6 +376,14 @@ void processInput(GLFWwindow* window, int key, int scancode, int action, int mod
 			wireframeToggle = false;
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		}
+	}
+
+	if (key == GLFW_KEY_1 && action == GLFW_RELEASE) {
+		lightModeToggle = LightMode::Point;
+	}
+	else if (key == GLFW_KEY_2 && action == GLFW_RELEASE) {
+		lightModeToggle = LightMode::Spotlight;
+	}
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
