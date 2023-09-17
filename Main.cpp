@@ -46,9 +46,6 @@ Shader* lightCubeShader;
 // Wireframe toggle
 bool wireframeToggle = false;
 
-// Light toggle
-LightMode lightModeToggle = LightMode::Point;
-
 int main()
 {
 	// glfw: initialize and configure
@@ -114,6 +111,7 @@ int main()
 	// Light settings
 	Light pointLight = {};
 	Light spotLight = {};
+	Light dirLight = {};
 
 	pointLight.ambient = { 0.2f, 0.2f, 0.2f };
 	pointLight.diffuse = { 0.5f, 0.5f, 0.5f };
@@ -122,6 +120,17 @@ int main()
 	spotLight.ambient = { 0.1f, 0.1f, 0.1f };
 	spotLight.diffuse = { 0.8f, 0.8f, 0.8f };
 	spotLight.specular = { 1.0f, 1.0f, 1.0f };
+
+	dirLight.ambient = { 0.2f, 0.2f, 0.2f };
+	dirLight.diffuse = { 0.5f, 0.5f, 0.5f };
+	dirLight.specular = { 1.0f, 1.0f, 1.0f };
+
+	glm::vec3 pointLightPositions[] = {
+		glm::vec3(0.7f,  0.2f,  2.0f),
+		glm::vec3(2.3f, -3.3f, -4.0f),
+		glm::vec3(-4.0f,  2.0f, -12.0f),
+		glm::vec3(0.0f,  0.0f, -3.0f)
+	};
 
 	float vertices[] = {
 		// positions          // normals           // texture coords
@@ -233,7 +242,7 @@ int main()
 
 		// render
 		// ------
-		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClearColor(0.03f, 0.03f, 0.03f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// lightPos update
@@ -263,36 +272,56 @@ int main()
 		lightingShader->setInt("material.emission", 2);
 		lightingShader->setFloat("material.shininess", material.shininess);
 
-		// Set lighting modes
-		lightingShader->setInt("lightmodeToggle", static_cast<int>(lightModeToggle));
+		lightingShader->setFloat("pointLights[0].constant", 1.0f);
 
-		if (lightModeToggle == LightMode::Point) {
-			// Point light!
-			lightingShader->setVec3("light.direction", -0.2f, -1.0f, -0.3f);
-			lightingShader->setVec3("light.position", lightPos);
-
-			lightingShader->setVec3("light.ambient", pointLight.ambient);
-			lightingShader->setVec3("light.diffuse", pointLight.diffuse);
-			lightingShader->setVec3("light.specular",pointLight.specular);
-		}
-		else {
-			// Spotlight!
-			lightingShader->setVec3("light.position", camera.Position);
-			lightingShader->setVec3("light.direction", camera.Front);
-			lightingShader->setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
-			lightingShader->setFloat("light.outerCutOff", glm::cos(glm::radians(17.5f)));
-
-			lightingShader->setVec3("light.ambient", spotLight.ambient);
-			// we configure the diffuse intensity slightly higher; the right lighting conditions differ with each lighting method and environment.
-			// each environment and lighting type requires some tweaking to get the best out of your environment.
-			lightingShader->setVec3("light.diffuse", spotLight.diffuse);
-			lightingShader->setVec3("light.specular", spotLight.specular);
-		}
-	
-		// Set the values for light attenuation
-		lightingShader->setFloat("light.constant", 1.0f);
-		lightingShader->setFloat("light.quadratic", 0.09f);
-		lightingShader->setFloat("light.linear", 0.032f);
+		// directional light
+		lightingShader->setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
+		lightingShader->setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
+		lightingShader->setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
+		lightingShader->setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
+		// point light 1
+		lightingShader->setVec3("pointLights[0].position", pointLightPositions[0]);
+		lightingShader->setVec3("pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
+		lightingShader->setVec3("pointLights[0].diffuse", 0.8f, 0.8f, 0.8f);
+		lightingShader->setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
+		lightingShader->setFloat("pointLights[0].constant", 1.0f);
+		lightingShader->setFloat("pointLights[0].linear", 0.09f);
+		lightingShader->setFloat("pointLights[0].quadratic", 0.032f);
+		// point light 2
+		lightingShader->setVec3("pointLights[1].position", pointLightPositions[1]);
+		lightingShader->setVec3("pointLights[1].ambient", 0.05f, 0.05f, 0.05f);
+		lightingShader->setVec3("pointLights[1].diffuse", 0.8f, 0.8f, 0.8f);
+		lightingShader->setVec3("pointLights[1].specular", 1.0f, 1.0f, 1.0f);
+		lightingShader->setFloat("pointLights[1].constant", 1.0f);
+		lightingShader->setFloat("pointLights[1].linear", 0.09f);
+		lightingShader->setFloat("pointLights[1].quadratic", 0.032f);
+		// point light 3
+		lightingShader->setVec3("pointLights[2].position", pointLightPositions[2]);
+		lightingShader->setVec3("pointLights[2].ambient", 0.05f, 0.05f, 0.05f);
+		lightingShader->setVec3("pointLights[2].diffuse", 0.8f, 0.8f, 0.8f);
+		lightingShader->setVec3("pointLights[2].specular", 1.0f, 1.0f, 1.0f);
+		lightingShader->setFloat("pointLights[2].constant", 1.0f);
+		lightingShader->setFloat("pointLights[2].linear", 0.09f);
+		lightingShader->setFloat("pointLights[2].quadratic", 0.032f);
+		// point light 4
+		lightingShader->setVec3("pointLights[3].position", pointLightPositions[3]);
+		lightingShader->setVec3("pointLights[3].ambient", 0.05f, 0.05f, 0.05f);
+		lightingShader->setVec3("pointLights[3].diffuse", 0.8f, 0.8f, 0.8f);
+		lightingShader->setVec3("pointLights[3].specular", 1.0f, 1.0f, 1.0f);
+		lightingShader->setFloat("pointLights[3].constant", 1.0f);
+		lightingShader->setFloat("pointLights[3].linear", 0.09f);
+		lightingShader->setFloat("pointLights[3].quadratic", 0.032f);
+		// spotLight
+		lightingShader->setVec3("spotLight.position", camera.Position);
+		lightingShader->setVec3("spotLight.direction", camera.Front);
+		lightingShader->setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
+		lightingShader->setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
+		lightingShader->setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
+		lightingShader->setFloat("spotLight.constant", 1.0f);
+		lightingShader->setFloat("spotLight.linear", 0.09f);
+		lightingShader->setFloat("spotLight.quadratic", 0.032f);
+		lightingShader->setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+		lightingShader->setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
 
 		// view/projection transformations
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
@@ -303,10 +332,6 @@ int main()
 		// world transformation
 		glm::mat4 model = glm::mat4(1.0f);
 		lightingShader->setMat4("model", model);
-
-		// render the cube - draw
-		//glBindVertexArray(cubeVAO);
-		//glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		for (unsigned int i = 0; i < 10; i++)
 		{
@@ -320,23 +345,18 @@ int main()
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
 
-		// Also draw the lamp object, only if the currently active type is
 		// point light
-		if (lightModeToggle == LightMode::Point) {
-			lightCubeShader->use();
-			lightCubeShader->setMat4("projection", projection);
-			lightCubeShader->setMat4("view", view);
+		lightCubeShader->use();
+		lightCubeShader->setMat4("projection", projection);
+		lightCubeShader->setMat4("view", view);
 
-			// world transformation
+		for (unsigned int i = 0; i < 4; i++)
+		{
 			model = glm::mat4(1.0f);
-
-			// lightPosOrbit is the current position of the white cube.
-			model = glm::translate(model, lightPos);
-			model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
-
+			model = glm::translate(model, pointLightPositions[i]);
+			model = glm::scale(model, glm::vec3(0.2f)); // Make it a smaller cube
 			lightCubeShader->setMat4("model", model);
 
-			// bind the other cube and draw again
 			glBindVertexArray(lightCubeVAO);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
@@ -379,28 +399,6 @@ void processInput(GLFWwindow* window, int key, int scancode, int action, int mod
 			wireframeToggle = false;
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		}
-	}
-
-	if (key == GLFW_KEY_1 && action == GLFW_RELEASE) {
-		lightModeToggle = LightMode::Point;
-	}
-	else if (key == GLFW_KEY_2 && action == GLFW_RELEASE) {
-		lightModeToggle = LightMode::Spotlight;
-	}
-
-	if (lightModeToggle == LightMode::Point) {
-		// Point light controls
-		if (key == GLFW_KEY_UP)
-			lightPos.y += 1.0f;
-
-		if (key == GLFW_KEY_DOWN)
-			lightPos.y -= 1.0f;
-
-		if (key == GLFW_KEY_LEFT)
-			lightPos.x -= 1.0f;
-
-		if (key == GLFW_KEY_RIGHT)
-			lightPos.x += 1.0f;
 	}
 }
 
